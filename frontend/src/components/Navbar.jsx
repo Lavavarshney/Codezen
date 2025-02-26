@@ -1,8 +1,8 @@
-"use client";
-import { useState } from "react";
-
+// frontend/src/components/Navbar.jsx
+import { useState } from "react"; // Single import at the top
 import { close, logo, menu } from "../assets";
 import { navLinks } from "../constants";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   const [active, setActive] = useState("Home");
@@ -24,17 +24,28 @@ const Navbar = () => {
             onMouseEnter={() => nav.id === "Options" && setDropdown(true)}
             onMouseLeave={() => nav.id === "Options" && setDropdown(false)}
           >
-            <a href={`#${nav.id}`}>{nav.title}</a>
-            {nav.id === "Options" && dropdown && (
-              <ul className="absolute top-full left-0 mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
-                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Stocks</li>
-                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Mutual Funds</li>
-              </ul>
+            {nav.id === "Options" ? (
+              <>
+                <span>{nav.title}</span>
+                {dropdown && (
+                  <ul className="absolute top-full left-0 mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
+                    <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
+                      <Link to="/dashboard/stocks">Stocks</Link>
+                    </li>
+                    <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
+                      <Link to="/dashboard/mutual-funds">Mutual Funds</Link>
+                    </li>
+                  </ul>
+                )}
+              </>
+            ) : (
+              <Link to={`#${nav.id}`}>{nav.title}</Link>
             )}
           </li>
         ))}
       </ul>
 
+      {/* Mobile Menu */}
       <div className="sm:hidden flex flex-1 justify-end items-center">
         <img
           src={toggle ? close : menu}
@@ -42,7 +53,6 @@ const Navbar = () => {
           className="w-[28px] h-[28px] object-contain"
           onClick={() => setToggle(!toggle)}
         />
-
         <div
           className={`${
             !toggle ? "hidden" : "flex"
@@ -59,12 +69,22 @@ const Navbar = () => {
                 onMouseEnter={() => nav.id === "Options" && setDropdown(true)}
                 onMouseLeave={() => nav.id === "Options" && setDropdown(false)}
               >
-                <a href={`#${nav.id}`}>{nav.title}</a>
-                {nav.id === "Options" && dropdown && (
-                  <ul className="absolute top-full left-0 mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
-                    <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Lavanya</li>
-                    <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Anamka</li>
-                  </ul>
+                {nav.id === "Options" ? (
+                  <>
+                    <span>{nav.title}</span>
+                    {dropdown && (
+                      <ul className="mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
+                        <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
+                          <Link to="/dashboard/stocks">Stocks</Link>
+                        </li>
+                        <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
+                          <Link to="/dashboard/mutual-funds">Mutual Funds</Link>
+                        </li>
+                      </ul>
+                    )}
+                  </>
+                ) : (
+                  <Link to={`#${nav.id}`}>{nav.title}</Link>
                 )}
               </li>
             ))}
