@@ -21,14 +21,14 @@ const Navbar = () => {
               active === nav.title ? "text-white" : "text-dimWhite"
             } ${index === navLinks.length - 1 ? "mr-0" : "mr-10"}`}
             onClick={() => setActive(nav.title)}
-            onMouseEnter={() => nav.id === "Romanch" && setDropdown(true)}
-            onMouseLeave={() => nav.id === "Romanch" && setDropdown(false)}
+            onMouseEnter={() => nav.id === "Options" && setDropdown(true)}
+            onMouseLeave={() => nav.id === "Options" && setDropdown(false)}
           >
             <a href={`#${nav.id}`}>{nav.title}</a>
-            {nav.id === "Romanch" && dropdown && (
+            {nav.id === "Options" && dropdown && (
               <ul className="absolute top-full left-0 mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
-                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Lavanya</li>
-                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Anamka</li>
+                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Stocks</li>
+                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Mutual Funds</li>
               </ul>
             )}
           </li>
@@ -56,11 +56,11 @@ const Navbar = () => {
                   active === nav.title ? "text-white" : "text-dimWhite"
                 } ${index === navLinks.length - 1 ? "mb-0" : "mb-4"}`}
                 onClick={() => setActive(nav.title)}
-                onMouseEnter={() => nav.id === "Romanch" && setDropdown(true)}
-                onMouseLeave={() => nav.id === "Romanch" && setDropdown(false)}
+                onMouseEnter={() => nav.id === "Options" && setDropdown(true)}
+                onMouseLeave={() => nav.id === "Options" && setDropdown(false)}
               >
                 <a href={`#${nav.id}`}>{nav.title}</a>
-                {nav.id === "Romanch" && dropdown && (
+                {nav.id === "Options" && dropdown && (
                   <ul className="absolute top-full left-0 mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
                     <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Lavanya</li>
                     <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Anamka</li>
