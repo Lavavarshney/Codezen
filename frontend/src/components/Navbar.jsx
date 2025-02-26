@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { useState } from "react";
 
 import { close, logo, menu } from "../assets";
@@ -7,6 +7,7 @@ import { navLinks } from "../constants";
 const Navbar = () => {
   const [active, setActive] = useState("Home");
   const [toggle, setToggle] = useState(false);
+  const [dropdown, setDropdown] = useState(false);
 
   return (
     <nav className="w-full flex py-6 justify-between items-center navbar">
@@ -16,12 +17,20 @@ const Navbar = () => {
         {navLinks.map((nav, index) => (
           <li
             key={nav.id}
-            className={`font-poppins font-normal cursor-pointer text-[16px] ${
+            className={`relative font-poppins font-normal cursor-pointer text-[16px] ${
               active === nav.title ? "text-white" : "text-dimWhite"
             } ${index === navLinks.length - 1 ? "mr-0" : "mr-10"}`}
             onClick={() => setActive(nav.title)}
+            onMouseEnter={() => nav.id === "Romanch" && setDropdown(true)}
+            onMouseLeave={() => nav.id === "Romanch" && setDropdown(false)}
           >
             <a href={`#${nav.id}`}>{nav.title}</a>
+            {nav.id === "Romanch" && dropdown && (
+              <ul className="absolute top-full left-0 mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
+                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Lavanya</li>
+                <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Anamka</li>
+              </ul>
+            )}
           </li>
         ))}
       </ul>
@@ -43,12 +52,20 @@ const Navbar = () => {
             {navLinks.map((nav, index) => (
               <li
                 key={nav.id}
-                className={`font-poppins font-medium cursor-pointer text-[16px] ${
+                className={`relative font-poppins font-medium cursor-pointer text-[16px] ${
                   active === nav.title ? "text-white" : "text-dimWhite"
                 } ${index === navLinks.length - 1 ? "mb-0" : "mb-4"}`}
                 onClick={() => setActive(nav.title)}
+                onMouseEnter={() => nav.id === "Romanch" && setDropdown(true)}
+                onMouseLeave={() => nav.id === "Romanch" && setDropdown(false)}
               >
                 <a href={`#${nav.id}`}>{nav.title}</a>
+                {nav.id === "Romanch" && dropdown && (
+                  <ul className="absolute top-full left-0 mt-2 bg-gray-800 p-2 rounded-lg shadow-lg">
+                    <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Lavanya</li>
+                    <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">Anamka</li>
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
