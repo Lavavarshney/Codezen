@@ -6,6 +6,7 @@ import Plotly from "react-plotly.js";
 import styles from "../../style";
 import RiskVolatility from "./RiskVolatility";
 import MonteCarloPrediction from "./MonteCarloPrediiction";
+import Groq from "groq-sdk"; // Use ES module import
 
 const MutualFundDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -18,6 +19,12 @@ const MutualFundDashboard = () => {
   const [heatmapData, setHeatmapData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState("");
+
+  // Initialize Groq client with API key from .env
+  const groqClient = new Groq({
+    apiKey: import.meta.env.VITE_GROQ_API_KEY,dangerouslyAllowBrowser: true 
+  });
 
   // Fetch random funds on initial load
   useEffect(() => {
@@ -75,6 +82,7 @@ const MutualFundDashboard = () => {
         setHistoricalNav([]);
         setAumData([]);
         setHeatmapData([]);
+        setAiAnalysis("");
         return;
       }
       setLoading(true);
@@ -101,7 +109,7 @@ const MutualFundDashboard = () => {
     fetchFundDetails();
   }, [selectedFund]);
 
-  // Define event handlers
+  // Event handlers
   const handleSearchChange = (e) => {
     e.preventDefault();
     setSearchTerm(e.target.value);
@@ -118,6 +126,76 @@ const MutualFundDashboard = () => {
     setSelectedFund(fund);
     setSearchTerm(fund.name);
     setSuggestions([]);
+  };
+
+  // AI Analysis Handler with Streaming
+  const handleAiAnalysis = async () => {
+    if (!selectedFund || Object.keys(fundDetails).length === 0) {
+      setAiAnalysis("Please select a fund first!");
+      return;
+    }
+
+    setLoading(true);
+    setAiAnalysis("");
+
+    // Prepare a concise summary from existing data
+    const latestNav = historicalNav.length > 0 ? parseFloat(historicalNav[historicalNav.length - 1].nav) : 0;
+    const oneYearAgoNav = historicalNav.length > 252 ? parseFloat(historicalNav[historicalNav.length - 252].nav) : latestNav;
+    const oneYearGrowth = oneYearAgoNav > 0 ? ((latestNav - oneYearAgoNav) / oneYearAgoNav * 100).toFixed(1) : "N/A";
+    const aum = aumData.length > 0 ? parseFloat(aumData[0]["Total AUM"]) : 0;
+    const bestMonth = heatmapData.length > 0 ? heatmapData.reduce((max, curr) => max.dayChange > curr.dayChange ? max : curr) : { month: "N/A", dayChange: 0 };
+    const worstMonth = heatmapData.length > 0 ? heatmapData.reduce((min, curr) => min.dayChange < curr.dayChange ? min : curr) : { month: "N/A", dayChange: 0 };
+
+    const summary = {
+      fund_name: selectedFund.name,
+      type: `${fundDetails.scheme_type} ${fundDetails.scheme_category}`,
+      launched: fundDetails.scheme_start_date ? JSON.parse(fundDetails.scheme_start_date.replace(/'/g, '"')).date : "N/A",
+      starting_nav: fundDetails.scheme_start_date ? parseFloat(JSON.parse(fundDetails.scheme_start_date.replace(/'/g, '"')).nav) : 0,
+      latest_nav: latestNav,
+      one_year_growth: oneYearGrowth,
+      aum: aum,
+      aum_context: aum > 10000 ? "Large fund size" : "Moderate fund size",
+      best_month: bestMonth.month ? `${bestMonth.month} (+${(bestMonth.dayChange * 100).toFixed(2)}%)` : "N/A",
+      worst_month: worstMonth.month ? `${worstMonth.month} (${(worstMonth.dayChange * 100).toFixed(2)}%)` : "N/A",
+    };
+
+    const prompt = `
+      I have data about a mutual fund called '${summary.fund_name}'. Please provide a simple, friendly explanation for someone new to investing based on this data:
+      - Fund Name: ${summary.fund_name}
+      - Type: ${summary.type}
+      - Launched: ${summary.launched}
+      - Starting NAV: ₹${summary.starting_nav.toFixed(2)}
+      - Latest NAV: ₹${summary.latest_nav.toFixed(2)}
+      - 1-Year Growth: ${summary.one_year_growth}%
+      - AUM: ₹${summary.aum.toLocaleString()} crores
+      - AUM Context: ${summary.aum_context}
+      - Best Month: ${summary.best_month}
+      - Worst Month: ${summary.worst_month}
+      Explain in a conversational tone what this fund is, how it’s doing, and whether it might be a good fit for a beginner. Keep it short, avoid technical jargon, and make it feel like advice from a friend!
+    `;
+
+    try {
+      const chatCompletion = await groqClient.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "llama-3.3-70b-versatile",
+        temperature: 1,
+        max_completion_tokens: 1024, // As per documentation
+        top_p: 1,
+        stream: true,
+        stop: null,
+      });
+
+      let analysis = "";
+      for await (const chunk of chatCompletion) {
+        analysis += chunk.choices[0]?.delta?.content || "";
+        setAiAnalysis(analysis); // Update state incrementally for streaming
+      }
+    } catch (err) {
+      console.error("Error generating AI analysis:", err);
+      setAiAnalysis("Oops, something went wrong while generating the analysis!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const plotData = heatmapData.length > 0
@@ -137,6 +215,27 @@ const MutualFundDashboard = () => {
   return (
     <div className={`bg-primary ${styles.paddingX} min-h-screen py-6`}>
       <div className="max-w-[1200px] mx-auto">
+        {/* AI Analysis Button */}
+        <div className="mb-6">
+          <button
+            onClick={handleAiAnalysis}
+            disabled={loading || !selectedFund}
+            className={`py-2 px-4 rounded bg-blue-gradient text-primary font-poppins font-medium ${
+              loading || !selectedFund ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"
+            }`}
+          >
+            {loading ? "Generating..." : "AI Analysis"}
+          </button>
+        </div>
+
+        {/* AI Analysis Display */}
+        {aiAnalysis && (
+          <div className="bg-gray-800 rounded-lg p-4 mb-6 shadow-md text-white">
+            <h3 className="text-lg font-semibold mb-2">AI Analysis</h3>
+            <p className="text-sm">{aiAnalysis}</p>
+          </div>
+        )}
+
         {/* Search Bar */}
         <div className="bg-gray-800 rounded-lg p-4 mb-6 shadow-md">
           <input
@@ -162,7 +261,7 @@ const MutualFundDashboard = () => {
           )}
         </div>
 
-        {loading ? (
+        {loading && !aiAnalysis ? (
           <p className="text-white text-center">Loading...</p>
         ) : error ? (
           <p className="text-red-500 text-center">{error}</p>
