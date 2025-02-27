@@ -2,7 +2,7 @@ import Navbar from "./Navbar";
 import Hero from "./hero";
 import Stats from "./Stats";
 import Business from "./business";
-import Billing from "./billing";
+import Billing from "./Billing";
 import CardDeal from "./cardDeal";
 import Testimonials from "./testimonials";
 import Clients from "./clients";

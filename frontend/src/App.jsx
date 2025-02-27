@@ -1,76 +1,58 @@
-// frontend/src/App.jsx
+import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import styles from "./style";
-import {
-  Navbar,
-  Hero,
-  Stats,
-  Business,
-  Billing,
-  CardDeal,
-  Testimonials,
-  Clients,
-  CTA,
-  Footer,
-} from "./components";
-import MutualFundDashboard from "./components/Dashboard/MutualFundDashboard";
-import CoinContextProvider from "./context/CoinContext"; // Import from new context file
-import CryptoDashboard from "./components/CryptoDashboard/App"; // Import the adapted vrinda App.jsx
+import { Navbar, Hero, Stats, Business, Billing, CardDeal, Testimonials, Clients, CTA, Footer } from "./components";
+import Posts from "./components/CommunityForum"; // Adjust path if needed
 
-// Home Page Component
-const Home = () => (
-  <div className="bg-primary w-full overflow-hidden">
-    <div className={`${styles.paddingX} ${styles.flexCenter}`}>
-      <div className={`${styles.boxWidth}`}>
-        <Navbar />
-      </div>
-    </div>
+const App = () => {
+  // Home component to keep the original layout
+  const Home = () => (
     <div className={`bg-primary ${styles.flexStart}`}>
       <div className={`${styles.boxWidth}`}>
         <Hero />
+        <div className={`bg-primary ${styles.paddingX} ${styles.flexCenter}`}>
+          <div className={`${styles.boxWidth}`}>
+            <Stats />
+            <Business />
+            <Billing />
+            <CardDeal />
+            <Testimonials />
+            <Clients />
+            <CTA />
+            <Posts/>
+            <Footer />
+          </div>
+        </div>
       </div>
     </div>
-    <div className={`bg-primary ${styles.paddingX} ${styles.flexCenter}`}>
-      <div className={`${styles.boxWidth}`}>
-        <Stats />
-        <Business />
-        <Billing />
-        <CardDeal />
-        <Testimonials />
-        <Clients />
-        <CTA />
-        <Footer />
-      </div>
-    </div>
-  </div>
-);
+  );
 
-// Main Dashboard Component (Wrapper for Stocks, Mutual Funds, and Crypto)
-const Dashboard = () => (
-  <div className="bg-primary w-full overflow-hidden">
-    <div className={`${styles.paddingX} ${styles.flexCenter}`}>
-      <div className={`${styles.boxWidth}`}>
-        <Navbar />
-      </div>
-    </div>
-    <Routes>
-      <Route path="/stocks" element={<div className={`${styles.paddingY} ${styles.flexCenter} text-white`}>Stock Market Dashboard (To Be Developed)</div>} />
-      <Route path="/mutual-funds" element={<MutualFundDashboard />} />
-      <Route path="/crypto/*" element={<CryptoDashboard />} />
-    </Routes>
-  </div>
-);
+  // Placeholder components for other navLinks (optional)
+  const Features = () => <div className="p-4">Features Page</div>;
+  const Product = () => <div className="p-4">Product Page</div>;
+  const ClientsPage = () => <div className="p-4">Clients Page</div>;
 
-// App Component with Routing
-const App = () => (
-  <Router>
-    <CoinContextProvider>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/dashboard/*" element={<Dashboard />} />
-      </Routes>
-    </CoinContextProvider>
-  </Router>
-);
+  return (
+    <Router>
+      <div className="bg-primary w-full overflow-hidden">
+        {/* Navbar is always visible */}
+        <div className={`${styles.paddingX} ${styles.flexCenter}`}>
+          <div className={`${styles.boxWidth}`}>
+            <Navbar />
+          </div>
+        </div>
+
+        {/* Routes */}
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/product" element={<Product />} />
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/communityforum" element={<Posts />} />
+        </Routes>
+      </div>
+    </Router>
+  );
+};
 
 export default App;
