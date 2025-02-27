@@ -1,5 +1,5 @@
 # D:/codezen/backend/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from mftool import Mftool
 import pandas as pd
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 mf = Mftool()
 
-# Enable CORS
+# Enable CORS with explicit configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -37,16 +37,23 @@ def stringify_dict(data: Dict[str, Any]) -> Dict[str, str]:
     return result
 
 @app.get("/api/schemes")
-async def get_schemes(amc: str = "ICICI") -> Dict[str, str]:
+async def get_schemes(search: str = "") -> Dict[str, str]:
     try:
-        schemas = mf.get_available_schemes(amc)
-        if schemas:
-            return schemas
-        logger.info(f"No schemes found for AMC: {amc}")
-        return {}
+        all_schemes = mf.get_scheme_codes()
+        if search:
+            filtered_schemes = {
+                code: name for code, name in all_schemes.items()
+                if search.lower() in name.lower()
+            }
+            if filtered_schemes:
+                return filtered_schemes
+            logger.info(f"No schemes found matching search: {search}")
+            return {}
+        logger.info("Returning all schemes (no search term provided)")
+        return all_schemes
     except Exception as e:
-        logger.error(f"Error fetching schemes for AMC {amc}: {str(e)}")
-        raise
+        logger.error(f"Error fetching schemes with search {search}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/scheme-details/{scheme_code}")
 async def get_scheme_details(scheme_code: str) -> Dict[str, str]:
@@ -58,21 +65,20 @@ async def get_scheme_details(scheme_code: str) -> Dict[str, str]:
         return {}
     except Exception as e:
         logger.error(f"Error fetching scheme details for {scheme_code}: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/historical-nav/{scheme_code}")
 async def get_historical_nav(scheme_code: str) -> List[Dict[str, str]]:
     try:
         nav_data = mf.get_scheme_historical_nav(scheme_code, as_Dataframe=True)
         if nav_data is not None and not nav_data.empty:
-            # Ensure all values are strings for Dict[str, str]
             nav_data = nav_data.astype(str)
             return nav_data.to_dict(orient="records")
         logger.info(f"No historical NAV data found for scheme_code: {scheme_code}")
         return []
     except Exception as e:
         logger.error(f"Error fetching historical NAV for {scheme_code}: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/compare-navs")
 async def compare_navs(scheme_codes: str) -> List[Dict[str, str]]:
@@ -103,12 +109,13 @@ async def compare_navs(scheme_codes: str) -> List[Dict[str, str]]:
                 else:
                     merged_df = merged_df.join(df, how="outer")
             merged_df = merged_df.reset_index()
+            logger.info(f"Successfully compared NAVs for scheme_codes: {scheme_codes}")
             return merged_df.to_dict(orient="records")
         logger.info(f"No valid data to compare for scheme_codes: {scheme_codes}")
         return []
     except Exception as e:
         logger.error(f"Error comparing NAVs for {scheme_codes}: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/average-aum")
 async def get_average_aum(period: str = "July - September 2024") -> List[Dict[str, str]]:
@@ -122,7 +129,7 @@ async def get_average_aum(period: str = "July - September 2024") -> List[Dict[st
         return []
     except Exception as e:
         logger.error(f"Error fetching AUM for period {period}: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/performance-heatmap/{scheme_code}")
 async def get_performance_heatmap(scheme_code: str) -> List[Dict[str, float]]:
@@ -139,7 +146,7 @@ async def get_performance_heatmap(scheme_code: str) -> List[Dict[str, float]]:
         return []
     except Exception as e:
         logger.error(f"Error fetching performance heatmap for {scheme_code}: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/risk-volatility/{scheme_code}")
 async def get_risk_volatility(scheme_code: str) -> Dict[str, Any]:
@@ -168,7 +175,7 @@ async def get_risk_volatility(scheme_code: str) -> Dict[str, Any]:
         return {}
     except Exception as e:
         logger.error(f"Error fetching risk volatility for {scheme_code}: {str(e)}")
-        raise
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
