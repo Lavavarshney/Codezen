@@ -6,7 +6,8 @@ import Plotly from "react-plotly.js";
 import styles from "../../style";
 import RiskVolatility from "./RiskVolatility";
 import MonteCarloPrediction from "./MonteCarloPrediiction";
-import Groq from "groq-sdk"; // Use ES module import
+import CalculateReturns from "./CalculateReturns"; // New import
+import Groq from "groq-sdk";
 
 const MutualFundDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,15 +16,14 @@ const MutualFundDashboard = () => {
   const [randomFunds, setRandomFunds] = useState([]);
   const [fundDetails, setFundDetails] = useState({});
   const [historicalNav, setHistoricalNav] = useState([]);
-  const [aumData, setAumData] = useState([]);
   const [heatmapData, setHeatmapData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [aiAnalysis, setAiAnalysis] = useState("");
 
-  // Initialize Groq client with API key from .env
   const groqClient = new Groq({
-    apiKey: import.meta.env.VITE_GROQ_API_KEY,dangerouslyAllowBrowser: true 
+    apiKey: import.meta.env.VITE_GROQ_API_KEY,
+    dangerouslyAllowBrowser: true,
   });
 
   // Fetch random funds on initial load
@@ -74,13 +74,12 @@ const MutualFundDashboard = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Fetch all fund details when a fund is selected
+  // Fetch fund details when a fund is selected
   useEffect(() => {
     const fetchFundDetails = async () => {
       if (!selectedFund) {
         setFundDetails({});
         setHistoricalNav([]);
-        setAumData([]);
         setHeatmapData([]);
         setAiAnalysis("");
         return;
@@ -94,9 +93,6 @@ const MutualFundDashboard = () => {
         const navResponse = await axios.get(`http://localhost:8000/api/historical-nav/${selectedFund.code}`);
         setHistoricalNav(navResponse.data);
 
-        const aumResponse = await axios.get("http://localhost:8000/api/average-aum");
-        setAumData(aumResponse.data.filter(item => item["Fund Name"] === selectedFund.name).slice(0, 1));
-
         const heatmapResponse = await axios.get(`http://localhost:8000/api/performance-heatmap/${selectedFund.code}`);
         setHeatmapData(heatmapResponse.data);
       } catch (err) {
@@ -109,7 +105,6 @@ const MutualFundDashboard = () => {
     fetchFundDetails();
   }, [selectedFund]);
 
-  // Event handlers
   const handleSearchChange = (e) => {
     e.preventDefault();
     setSearchTerm(e.target.value);
@@ -128,7 +123,6 @@ const MutualFundDashboard = () => {
     setSuggestions([]);
   };
 
-  // AI Analysis Handler with Streaming
   const handleAiAnalysis = async () => {
     if (!selectedFund || Object.keys(fundDetails).length === 0) {
       setAiAnalysis("Please select a fund first!");
@@ -138,11 +132,9 @@ const MutualFundDashboard = () => {
     setLoading(true);
     setAiAnalysis("");
 
-    // Prepare a concise summary from existing data
     const latestNav = historicalNav.length > 0 ? parseFloat(historicalNav[historicalNav.length - 1].nav) : 0;
     const oneYearAgoNav = historicalNav.length > 252 ? parseFloat(historicalNav[historicalNav.length - 252].nav) : latestNav;
     const oneYearGrowth = oneYearAgoNav > 0 ? ((latestNav - oneYearAgoNav) / oneYearAgoNav * 100).toFixed(1) : "N/A";
-    const aum = aumData.length > 0 ? parseFloat(aumData[0]["Total AUM"]) : 0;
     const bestMonth = heatmapData.length > 0 ? heatmapData.reduce((max, curr) => max.dayChange > curr.dayChange ? max : curr) : { month: "N/A", dayChange: 0 };
     const worstMonth = heatmapData.length > 0 ? heatmapData.reduce((min, curr) => min.dayChange < curr.dayChange ? min : curr) : { month: "N/A", dayChange: 0 };
 
@@ -153,8 +145,6 @@ const MutualFundDashboard = () => {
       starting_nav: fundDetails.scheme_start_date ? parseFloat(JSON.parse(fundDetails.scheme_start_date.replace(/'/g, '"')).nav) : 0,
       latest_nav: latestNav,
       one_year_growth: oneYearGrowth,
-      aum: aum,
-      aum_context: aum > 10000 ? "Large fund size" : "Moderate fund size",
       best_month: bestMonth.month ? `${bestMonth.month} (+${(bestMonth.dayChange * 100).toFixed(2)}%)` : "N/A",
       worst_month: worstMonth.month ? `${worstMonth.month} (${(worstMonth.dayChange * 100).toFixed(2)}%)` : "N/A",
     };
@@ -167,8 +157,6 @@ const MutualFundDashboard = () => {
       - Starting NAV: ₹${summary.starting_nav.toFixed(2)}
       - Latest NAV: ₹${summary.latest_nav.toFixed(2)}
       - 1-Year Growth: ${summary.one_year_growth}%
-      - AUM: ₹${summary.aum.toLocaleString()} crores
-      - AUM Context: ${summary.aum_context}
       - Best Month: ${summary.best_month}
       - Worst Month: ${summary.worst_month}
       Explain in a conversational tone what this fund is, how it’s doing, and whether it might be a good fit for a beginner. Keep it short, avoid technical jargon, and make it feel like advice from a friend!
@@ -179,7 +167,7 @@ const MutualFundDashboard = () => {
         messages: [{ role: "user", content: prompt }],
         model: "llama-3.3-70b-versatile",
         temperature: 1,
-        max_completion_tokens: 1024, // As per documentation
+        max_completion_tokens: 1024,
         top_p: 1,
         stream: true,
         stop: null,
@@ -188,7 +176,7 @@ const MutualFundDashboard = () => {
       let analysis = "";
       for await (const chunk of chatCompletion) {
         analysis += chunk.choices[0]?.delta?.content || "";
-        setAiAnalysis(analysis); // Update state incrementally for streaming
+        setAiAnalysis(analysis);
       }
     } catch (err) {
       console.error("Error generating AI analysis:", err);
@@ -215,7 +203,6 @@ const MutualFundDashboard = () => {
   return (
     <div className={`bg-primary ${styles.paddingX} min-h-screen py-6`}>
       <div className="max-w-[1200px] mx-auto">
-        {/* AI Analysis Button */}
         <div className="mb-6">
           <button
             onClick={handleAiAnalysis}
@@ -228,7 +215,6 @@ const MutualFundDashboard = () => {
           </button>
         </div>
 
-        {/* AI Analysis Display */}
         {aiAnalysis && (
           <div className="bg-gray-800 rounded-lg p-4 mb-6 shadow-md text-white">
             <h3 className="text-lg font-semibold mb-2">AI Analysis</h3>
@@ -236,7 +222,6 @@ const MutualFundDashboard = () => {
           </div>
         )}
 
-        {/* Search Bar */}
         <div className="bg-gray-800 rounded-lg p-4 mb-6 shadow-md">
           <input
             type="text"
@@ -267,7 +252,6 @@ const MutualFundDashboard = () => {
           <p className="text-red-500 text-center">{error}</p>
         ) : selectedFund ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Fund Details Card */}
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
               <h3 className="text-white text-lg font-semibold mb-2">{selectedFund.name}</h3>
               <div className="text-gray-300 text-sm">
@@ -285,7 +269,6 @@ const MutualFundDashboard = () => {
               </div>
             </div>
 
-            {/* Historical NAV Card */}
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
               <h3 className="text-white text-lg font-semibold mb-2">Historical NAV (30+ Days)</h3>
               {filteredNavData.length > 0 ? (
@@ -301,19 +284,10 @@ const MutualFundDashboard = () => {
               )}
             </div>
 
-            {/* Average AUM Card */}
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
-              <h3 className="text-white text-lg font-semibold mb-2">Average AUM</h3>
-              {aumData.length > 0 ? (
-                <div className="text-gray-300 text-sm">
-                  <p><span className="font-medium">Total AUM:</span> {aumData[0]["Total AUM"]}</p>
-                </div>
-              ) : (
-                <p className="text-gray-400">No AUM data</p>
-              )}
+              <CalculateReturns selectedScheme={selectedFund} /> {/* Replace Average AUM */}
             </div>
 
-            {/* Performance Heatmap Card */}
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
               <h3 className="text-white text-lg font-semibold mb-2">Performance Heatmap</h3>
               {heatmapData.length > 0 ? (
@@ -333,12 +307,10 @@ const MutualFundDashboard = () => {
               )}
             </div>
 
-            {/* Risk & Volatility Card */}
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
               <RiskVolatility selectedScheme={selectedFund} />
             </div>
 
-            {/* Monte Carlo Prediction Card */}
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
               <MonteCarloPrediction selectedScheme={selectedFund} />
             </div>
