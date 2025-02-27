@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Any
 import logging
+from starlette.responses import JSONResponse
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +23,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Custom middleware to ensure CORS headers on all responses
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        logger.error(f"Unhandled exception in request {request.url}: {str(e)}")
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": str(e)}
+        )
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 # Helper function to convert scheme codes
 scheme_names = {v: k for k, v in mf.get_scheme_codes().items()}
@@ -81,7 +98,7 @@ async def get_historical_nav(scheme_code: str) -> List[Dict[str, str]]:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/compare-navs")
-async def compare_navs(scheme_codes: str) -> List[Dict[str, str]]:
+async def compare_navs(scheme_codes: str) -> List[Dict[str, Any]]:
     try:
         codes = scheme_codes.split(",")
         if not codes:
@@ -90,14 +107,17 @@ async def compare_navs(scheme_codes: str) -> List[Dict[str, str]]:
 
         comparison_data = {}
         for code in codes:
-            data = mf.get_scheme_historical_nav(code, as_Dataframe=True)
-            if data is not None and not data.empty:
-                data = data.reset_index().rename(columns={"index": "date"})
-                data["date"] = pd.to_datetime(data["date"], dayfirst=True).dt.strftime("%Y-%m-%d")
-                data["nav"] = pd.to_numeric(data["nav"], errors="coerce").replace(0, None).interpolate()
-                comparison_data[code] = data[["date", "nav"]].to_dict(orient="records")
-            else:
-                logger.info(f"No historical NAV data found for scheme_code: {code}")
+            try:
+                data = mf.get_scheme_historical_nav(code.strip(), as_Dataframe=True)
+                if data is not None and not data.empty:
+                    data = data.reset_index().rename(columns={"index": "date"})
+                    data["date"] = pd.to_datetime(data["date"], dayfirst=True).dt.strftime("%Y-%m-%d")
+                    data["nav"] = pd.to_numeric(data["nav"], errors="coerce").replace(0, None).interpolate()
+                    comparison_data[code] = data[["date", "nav"]].to_dict(orient="records")
+                else:
+                    logger.info(f"No historical NAV data found for scheme_code: {code}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch NAV data for {code}: {str(e)}")
 
         if comparison_data:
             merged_df = None
@@ -154,7 +174,7 @@ async def get_risk_volatility(scheme_code: str) -> Dict[str, Any]:
         nav_data = mf.get_scheme_historical_nav(scheme_code, as_Dataframe=True)
         if nav_data is not None and not nav_data.empty:
             nav_data = nav_data.reset_index().rename(columns={"index": "date"})
-            nav_data["date"] = pd.to_datetime(nav_data["date"], dayfirst=True)
+            nav_data["date"] = pd.to_datetime(nav_data["date"], dayfirst=True)  # Fixed typo: 'data' -> 'nav_data'
             nav_data["nav"] = pd.to_numeric(nav_data["nav"], errors="coerce")
             nav_data = nav_data.dropna(subset=["nav"])
             nav_data["returns"] = nav_data["nav"] / nav_data["nav"].shift(1) - 1

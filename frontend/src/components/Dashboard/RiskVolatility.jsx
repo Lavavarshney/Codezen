@@ -4,36 +4,55 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
 import styles from "../../style";
 
 const RiskVolatility = () => {
-  const [selectedScheme, setSelectedScheme] = useState("120164");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedScheme, setSelectedScheme] = useState(null);
   const [metrics, setMetrics] = useState({});
   const [returnsData, setReturnsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch scheme codes for dropdown
-  const [schemeOptions, setSchemeOptions] = useState([]);
+  // Fetch suggestions based on search term
   useEffect(() => {
-    const fetchSchemeCodes = async () => {
-      try {
-        const response = await axios.get("http://localhost:8000/api/schemes?amc=ICICI");
-        const options = Object.entries(response.data).map(([code, name]) => ({
-          code,
-          name,
-        }));
-        setSchemeOptions(options);
-      } catch (err) {
-        console.error("Error fetching scheme codes:", err);
+    const fetchSuggestions = async () => {
+      if (searchTerm.length < 2) {
+        setSuggestions([]);
+        return;
       }
-    };
-    fetchSchemeCodes();
-  }, []);
-
-  useEffect(() => {
-    const fetchRiskData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`http://localhost:8000/api/risk-volatility/${selectedScheme}`);
+        const response = await axios.get(`http://localhost:8000/api/schemes?search=${searchTerm}`);
+        const schemesArray = Object.entries(response.data).map(([code, name]) => ({
+          code,
+          name,
+        }));
+        setSuggestions(schemesArray.slice(0, 10));
+      } catch (err) {
+        console.error("Error fetching suggestions:", err);
+        setError("Failed to fetch suggestions. Please try again.");
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const timer = setTimeout(fetchSuggestions, 500); // Debounce
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch risk data when a scheme is selected
+  useEffect(() => {
+    const fetchRiskData = async () => {
+      if (!selectedScheme) {
+        setMetrics({});
+        setReturnsData([]);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await axios.get(`http://localhost:8000/api/risk-volatility/${selectedScheme.code}`);
         setMetrics({
           annualized_volatility: response.data.annualized_volatility,
           annualized_return: response.data.annualized_return,
@@ -52,42 +71,76 @@ const RiskVolatility = () => {
     fetchRiskData();
   }, [selectedScheme]);
 
+  const handleSearchChange = (e) => {
+    e.preventDefault();
+    setSearchTerm(e.target.value);
+    setSelectedScheme(null); // Clear selection when typing
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+    }
+  };
+
+  const handleSelectScheme = (scheme) => {
+    setSelectedScheme(scheme);
+    setSearchTerm(scheme.name);
+    setSuggestions([]);
+  };
+
   return (
-    <section className={`${styles.paddingY} ${styles.flexCenter} flex-col`}>
+    <section className={`${styles.paddingY} ${styles.flexCenter} flex-col min-h-[50vh]`}>
       <h2 className={styles.heading2}>Risk and Volatility Analysis</h2>
-      <select
-        value={selectedScheme}
-        onChange={(e) => setSelectedScheme(e.target.value)}
-        className="p-2 rounded bg-dimBlue text-white mb-4"
-      >
-        {schemeOptions.map((option) => (
-          <option key={option.code} value={option.code}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-      {loading ? (
-        <p className={styles.paragraph}>Loading...</p>
-      ) : error ? (
-        <p className={styles.paragraph}>{error}</p>
-      ) : Object.keys(metrics).length > 0 ? (
-        <>
-          <div className="text-white mb-4">
-            <p>Annualized Volatility: {(metrics.annualized_volatility * 100).toFixed(2)}%</p>
-            <p>Annualized Return: {(metrics.annualized_return * 100).toFixed(2)}%</p>
-            <p>Sharpe Ratio: {metrics.sharpe_ratio.toFixed(2)}</p>
-          </div>
-          <LineChart width={600} height={300} data={returnsData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="returns" stroke="#00f6ff" />
-          </LineChart>
-        </>
-      ) : (
-        <p className={styles.paragraph}>No risk data available</p>
-      )}
+      <div className="relative w-full max-w-[600px] mb-4">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={handleSearchChange}
+          onKeyDown={handleKeyDown}
+          className="p-2 rounded bg-dimBlue text-white w-full focus:outline-none"
+          placeholder="Search for a mutual fund..."
+        />
+        {suggestions.length > 0 && (
+          <ul className="absolute z-10 bg-black-gradient text-white rounded-lg w-full max-h-60 overflow-y-auto mt-1 shadow-lg">
+            {suggestions.map((scheme) => (
+              <li
+                key={scheme.code}
+                onClick={() => handleSelectScheme(scheme)}
+                className="p-2 hover:bg-gray-700 cursor-pointer"
+              >
+                {scheme.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="w-full max-w-[600px]">
+        {loading ? (
+          <p className={styles.paragraph}>Loading...</p>
+        ) : error ? (
+          <p className={styles.paragraph}>{error}</p>
+        ) : selectedScheme && Object.keys(metrics).length > 0 ? (
+          <>
+            <div className="text-white mb-4">
+              <p>Annualized Volatility: {(metrics.annualized_volatility * 100).toFixed(2)}%</p>
+              <p>Annualized Return: {(metrics.annualized_return * 100).toFixed(2)}%</p>
+              <p>Sharpe Ratio: {metrics.sharpe_ratio.toFixed(2)}</p>
+            </div>
+            <div className="flex justify-center">
+              <LineChart width={600} height={300} data={returnsData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="returns" stroke="#00f6ff" />
+              </LineChart>
+            </div>
+          </>
+        ) : (
+          <p className={styles.paragraph}>Search and select a scheme to view risk analysis</p>
+        )}
+      </div>
     </section>
   );
 };

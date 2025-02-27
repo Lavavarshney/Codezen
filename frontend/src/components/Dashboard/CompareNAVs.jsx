@@ -52,6 +52,7 @@ const CompareNAVs = () => {
       try {
         const schemeCodes = selectedSchemes.map(scheme => scheme.code).join(",");
         const response = await axios.get(`http://localhost:8000/api/compare-navs?scheme_codes=${schemeCodes}`);
+        console.log("Fetched NAV data:", response.data); // Debug log
         setNavData(response.data);
       } catch (err) {
         console.error("Error fetching comparison data:", err);
@@ -152,8 +153,9 @@ const CompareNAVs = () => {
                 <Line
                   key={scheme.code}
                   type="monotone"
-                  dataKey={scheme.name}
+                  dataKey={scheme.code} // Use scheme.code instead of scheme.name
                   stroke="#00f6ff"
+                  name={scheme.name} // Display name in legend
                 />
               ))}
             </LineChart>
