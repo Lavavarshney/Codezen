@@ -53,7 +53,7 @@ const Dashboard = () => (
     </div>
     <Routes>
       <Route path="/stocks" element={<div className={`${styles.paddingY} ${styles.flexCenter} text-white`}>Stock Market Dashboard (To Be Developed)</div>} />
-      <Route path="/mutual-funds/*" element={<MutualFundDashboard />} />
+      <Route path="/mutual-funds" element={<MutualFundDashboard />} />
     </Routes>
   </div>
 );
