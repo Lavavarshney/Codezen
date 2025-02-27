@@ -101,6 +101,7 @@ const MutualFundDashboard = () => {
     fetchFundDetails();
   }, [selectedFund]);
 
+  // Define event handlers
   const handleSearchChange = (e) => {
     e.preventDefault();
     setSearchTerm(e.target.value);
@@ -191,14 +192,8 @@ const MutualFundDashboard = () => {
               {filteredNavData.length > 0 ? (
                 <LineChart width={350} height={200} data={filteredNavData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#fff" 
-                    tick={{ fontSize: 10 }} 
-                    interval="preserveStartEnd" 
-                    tickCount={6}
-                  />
-                  <YAxis stroke="#fff" tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
+                  <XAxis dataKey="date" stroke="#fff" tick={{ fontSize: 10 }} interval="preserveStartEnd" tickCount={6} />
+                  <YAxis stroke="#fff" tick={{ fontSize: 10 }} domain={["auto", "auto"]} />
                   <Tooltip contentStyle={{ backgroundColor: "#333", border: "none" }} />
                   <Line type="monotone" dataKey="nav" stroke="#00f6ff" dot={false} strokeWidth={2} />
                 </LineChart>
@@ -239,12 +234,14 @@ const MutualFundDashboard = () => {
               )}
             </div>
 
-            {/* Risk & Volatility and Monte Carlo Prediction */}
-            <div className="bg-gray-800 rounded-lg p-4 shadow-md md:col-span-2">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <RiskVolatility selectedScheme={selectedFund} />
-                <MonteCarloPrediction selectedScheme={selectedFund} />
-              </div>
+            {/* Risk & Volatility Card */}
+            <div className="bg-gray-800 rounded-lg p-4 shadow-md">
+              <RiskVolatility selectedScheme={selectedFund} />
+            </div>
+
+            {/* Monte Carlo Prediction Card */}
+            <div className="bg-gray-800 rounded-lg p-4 shadow-md">
+              <MonteCarloPrediction selectedScheme={selectedFund} />
             </div>
           </div>
         ) : (

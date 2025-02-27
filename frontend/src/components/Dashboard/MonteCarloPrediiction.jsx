@@ -21,47 +21,24 @@ const MonteCarloPrediction = ({ selectedScheme }) => {
         setError("No scheme selected.");
         return;
       }
-
-      console.log("Fetching data for scheme:", selectedScheme.code);
       setLoading(true);
       setError(null);
-
       try {
-        // Fetch historical NAV
         const navResponse = await axios.get(`http://localhost:8000/api/historical-nav/${selectedScheme.code}`);
-        console.log("NAV Response Sample:", JSON.stringify(navResponse.data.slice(0, 5), null, 2));
         const navData = navResponse.data.map(item => ({
           ...item,
-          date: parseDate(item.date), // Normalize to yyyy-mm-dd
+          date: parseDate(item.date),
         }));
-        if (!navData || navData.length === 0) {
-          console.warn("No historical NAV data found.");
-          setHistoricalData([]);
-          setMonteCarloData([]);
-          return;
-        }
         setHistoricalData(navData);
 
-        // Fetch risk/volatility data
         const riskResponse = await axios.get(`http://localhost:8000/api/risk-volatility/${selectedScheme.code}`);
-        console.log("Risk Response:", JSON.stringify(riskResponse.data, null, 2));
-        const riskData = riskResponse.data;
-        if (!riskData || !riskData.annualized_return || !riskData.annualized_volatility) {
-          console.warn("Invalid or missing risk/volatility data.");
-          setMonteCarloData([]);
-          return;
-        }
-        const { annualized_return, annualized_volatility } = riskData;
-
+        const { annualized_return, annualized_volatility } = riskResponse.data;
         const dailyReturn = annualized_return / 252;
         const dailyVolatility = annualized_volatility / Math.sqrt(252);
-        console.log("Daily Return:", dailyReturn, "Daily Volatility:", dailyVolatility);
-
         const simulatedPaths = runMonteCarloSimulation(dailyReturn, dailyVolatility, navData);
-        console.log("Simulated Paths Sample:", simulatedPaths.length > 0 ? JSON.stringify(simulatedPaths[0].slice(0, 5), null, 2) : "[]");
         setMonteCarloData(simulatedPaths);
       } catch (err) {
-        console.error("Error fetching data for Monte Carlo:", err.message, err.response?.data || err);
+        console.error("Error fetching data for Monte Carlo:", err);
         setError(`Failed to fetch data: ${err.message}`);
         setMonteCarloData([]);
         setHistoricalData([]);
@@ -72,75 +49,34 @@ const MonteCarloPrediction = ({ selectedScheme }) => {
     fetchDataAndSimulate();
   }, [selectedScheme]);
 
-  // Parse date from various formats to yyyy-mm-dd, handle undefined or invalid cases
   const parseDate = (dateStr) => {
-    if (!dateStr || typeof dateStr !== "string") {
-      console.warn("Invalid or missing date string, using fallback:", dateStr);
-      return new Date().toISOString().split("T")[0]; // Fallback to today's date
-    }
-
+    if (!dateStr) return new Date().toISOString().split("T")[0];
     const parts = dateStr.split("-");
-    if (parts.length !== 3) {
-      console.warn("Unexpected date format, using fallback:", dateStr);
-      return new Date().toISOString().split("T")[0]; // Fallback to today's date
-    }
-
+    if (parts.length !== 3) return dateStr;
     let [day, month, year] = parts;
-    // Handle dd-mm-yyyy format (common with mftool)
     if (parseInt(day) > 12 && parseInt(month) <= 12) {
       return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-    }
-    // Assume yyyy-mm-dd or adjust if first part looks like a year
-    if (parseInt(day) > 31 || parseInt(month) > 12) {
-      console.warn("Ambiguous date format, assuming yyyy-mm-dd:", dateStr);
-      return dateStr; // Return as-is if unclear
     }
     return `${day}-${month.padStart(2, "0")}-${year.padStart(2, "0")}`;
   };
 
   const runMonteCarloSimulation = (dailyReturn, dailyVolatility, navData) => {
-    console.log("Running Monte Carlo with:", { dailyReturn, dailyVolatility, navDataLength: navData.length });
-    if (!navData || navData.length === 0) {
-      console.warn("No NAV data for simulation.");
-      return [];
-    }
-
+    if (!navData || navData.length === 0) return [];
     const lastEntry = navData[navData.length - 1];
     const lastNav = parseFloat(lastEntry.nav);
-    console.log("Last NAV:", lastNav);
-    if (isNaN(lastNav)) {
-      console.warn("Last NAV is invalid:", lastEntry.nav);
-      return [];
-    }
-
-    const lastDateStr = lastEntry.date;
-    console.log("Last Date (parsed):", lastDateStr);
-    const lastDate = new Date(lastDateStr);
-    if (isNaN(lastDate.getTime())) {
-      console.error("Invalid initial date, cannot proceed:", lastDateStr);
-      return [];
-    }
+    const lastDate = new Date(lastEntry.date);
+    if (isNaN(lastNav) || isNaN(lastDate.getTime())) return [];
 
     const simulations = [];
     for (let i = 0; i < SIMULATIONS; i++) {
-      const path = [{ date: lastDateStr, nav: lastNav }];
+      const path = [{ date: lastEntry.date, nav: lastNav }];
       let currentNav = lastNav;
-
       for (let j = 1; j <= DAYS_AHEAD; j++) {
         const randomReturn = dailyReturn + dailyVolatility * gaussianRandom();
         currentNav *= (1 + randomReturn);
         const previousDate = new Date(path[j - 1].date);
         previousDate.setDate(previousDate.getDate() + 1);
-
-        if (isNaN(previousDate.getTime())) {
-          console.error("Invalid date generated at step", j, "from", path[j - 1].date);
-          return [];
-        }
-
-        path.push({
-          date: previousDate.toISOString().split("T")[0],
-          nav: currentNav,
-        });
+        path.push({ date: previousDate.toISOString().split("T")[0], nav: currentNav });
       }
       simulations.push(path);
     }
@@ -156,33 +92,22 @@ const MonteCarloPrediction = ({ selectedScheme }) => {
   const combinedData = historicalData.concat(monteCarloData.length > 0 ? monteCarloData[0] : []);
 
   return (
-    <section className={`${styles.paddingY} flex-col`}>
-      <h2 className={styles.heading2}>Monte Carlo Prediction (1 Year)</h2>
-      <div className="w-full max-w-[600px]">
+    <div className="flex flex-col">
+      <h3 className="text-white text-lg font-semibold mb-2">Monte Carlo Prediction (1 Year)</h3>
+      <div className="w-full">
         {loading ? (
-          <p className={styles.paragraph}>Loading...</p>
+          <p className="text-gray-400">Loading...</p>
         ) : error ? (
-          <p className={styles.paragraph}>{error}</p>
+          <p className="text-red-500">{error}</p>
         ) : selectedScheme && monteCarloData.length > 0 ? (
           <div className="flex justify-center">
-            <LineChart
-              width={600}
-              height={300}
-              data={combinedData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis domain={["auto", "auto"]} />
-              <Tooltip />
+            <LineChart width={350} height={200} data={combinedData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis dataKey="date" stroke="#fff" tick={{ fontSize: 10 }} interval="preserveStartEnd" tickCount={6} />
+              <YAxis stroke="#fff" tick={{ fontSize: 10 }} domain={["auto", "auto"]} />
+              <Tooltip contentStyle={{ backgroundColor: "#333", border: "none" }} />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="nav"
-                stroke="#8884d8"
-                name="Historical + Predicted NAV"
-                dot={false}
-              />
+              <Line type="monotone" dataKey="nav" stroke="#8884d8" name="Historical + Predicted" dot={false} strokeWidth={2} />
               {monteCarloData.slice(1, 5).map((path, index) => (
                 <Line
                   key={index}
@@ -193,15 +118,16 @@ const MonteCarloPrediction = ({ selectedScheme }) => {
                   name={`Simulation ${index + 1}`}
                   dot={false}
                   strokeOpacity={0.3}
+                  strokeWidth={2}
                 />
               ))}
             </LineChart>
           </div>
         ) : (
-          <p className={styles.paragraph}>No data available for Monte Carlo simulation</p>
+          <p className="text-gray-400">No data available for Monte Carlo simulation</p>
         )}
       </div>
-    </section>
+    </div>
   );
 };
 

@@ -10,7 +10,6 @@ const RiskVolatility = ({ selectedScheme }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch risk data when a scheme is selected
   useEffect(() => {
     const fetchRiskData = async () => {
       if (!selectedScheme) {
@@ -41,35 +40,35 @@ const RiskVolatility = ({ selectedScheme }) => {
   }, [selectedScheme]);
 
   return (
-    <section className={`${styles.paddingY} flex-col`}>
-      <h2 className={styles.heading2}>Risk and Volatility Analysis</h2>
-      <div className="w-full max-w-[600px]">
+    <div className="flex flex-col">
+      <h3 className="text-white text-lg font-semibold mb-2">Risk & Volatility</h3>
+      <div className="w-full">
         {loading ? (
-          <p className={styles.paragraph}>Loading...</p>
+          <p className="text-gray-400">Loading...</p>
         ) : error ? (
-          <p className={styles.paragraph}>{error}</p>
+          <p className="text-red-500">{error}</p>
         ) : selectedScheme && Object.keys(metrics).length > 0 ? (
           <>
-            <div className="text-white mb-4">
-              <p>Annualized Volatility: {(metrics.annualized_volatility * 100).toFixed(2)}%</p>
-              <p>Annualized Return: {(metrics.annualized_return * 100).toFixed(2)}%</p>
-              <p>Sharpe Ratio: {metrics.sharpe_ratio.toFixed(2)}</p>
+            <div className="text-gray-300 text-sm mb-4">
+              <p><span className="font-medium">Annualized Volatility:</span> {(metrics.annualized_volatility * 100).toFixed(2)}%</p>
+              <p><span className="font-medium">Annualized Return:</span> {(metrics.annualized_return * 100).toFixed(2)}%</p>
+              <p><span className="font-medium">Sharpe Ratio:</span> {metrics.sharpe_ratio.toFixed(2)}</p>
             </div>
             <div className="flex justify-center">
-              <LineChart width={600} height={300} data={returnsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="returns" stroke="#00f6ff" />
+              <LineChart width={350} height={200} data={returnsData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                <XAxis dataKey="date" stroke="#fff" tick={{ fontSize: 10 }} interval="preserveStartEnd" tickCount={6} />
+                <YAxis stroke="#fff" tick={{ fontSize: 10 }} domain={["auto", "auto"]} />
+                <Tooltip contentStyle={{ backgroundColor: "#333", border: "none" }} />
+                <Line type="monotone" dataKey="returns" stroke="#00f6ff" dot={false} strokeWidth={2} />
               </LineChart>
             </div>
           </>
         ) : (
-          <p className={styles.paragraph}>No risk analysis data available</p>
+          <p className="text-gray-400">No risk analysis data available</p>
         )}
       </div>
-    </section>
+    </div>
   );
 };
 
