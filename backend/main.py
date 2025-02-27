@@ -196,6 +196,35 @@ async def get_risk_volatility(scheme_code: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error fetching risk volatility for {scheme_code}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/risk-volatility/{scheme_code}")
+async def get_risk_volatility(scheme_code: str) -> Dict[str, Any]:
+    try:
+        nav_data = mf.get_scheme_historical_nav(scheme_code, as_Dataframe=True)
+        if nav_data is not None and not nav_data.empty:
+            nav_data = nav_data.reset_index().rename(columns={"index": "date"})
+            nav_data["date"] = pd.to_datetime(nav_data["date"], dayfirst=True)
+            nav_data["nav"] = pd.to_numeric(nav_data["nav"], errors="coerce")
+            nav_data = nav_data.dropna(subset=["nav"])
+            nav_data["returns"] = nav_data["nav"] / nav_data["nav"].shift(1) - 1
+            nav_data = nav_data.dropna(subset=["returns"])
+
+            annualized_volatility = nav_data["returns"].std() * np.sqrt(252)
+            annualized_return = (nav_data["returns"].mean() + 1) ** 252 - 1
+            risk_free_rate = 0.06
+            sharpe_ratio = (annualized_return - risk_free_rate) / annualized_volatility
+
+            return {
+                "annualized_volatility": annualized_volatility,
+                "annualized_return": annualized_return,
+                "sharpe_ratio": sharpe_ratio,
+                "returns": nav_data[["date", "returns", "nav"]].to_dict(orient="records")
+            }
+        logger.info(f"No historical NAV data found for risk analysis, scheme_code: {scheme_code}")
+        return {}
+    except Exception as e:
+        logger.error(f"Error fetching risk volatility for {scheme_code}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

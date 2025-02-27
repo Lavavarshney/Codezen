@@ -1,8 +1,11 @@
+// frontend/src/components/Dashboard/MutualFundDashboard.jsx
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import Plotly from "react-plotly.js";
 import styles from "../../style";
+import RiskVolatility from "./RiskVolatility";
+import MonteCarloPrediction from "./MonteCarloPrediiction";
 
 const MutualFundDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -13,7 +16,6 @@ const MutualFundDashboard = () => {
   const [historicalNav, setHistoricalNav] = useState([]);
   const [aumData, setAumData] = useState([]);
   const [heatmapData, setHeatmapData] = useState([]);
-  const [riskData, setRiskData] = useState({ metrics: {}, returns: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -73,7 +75,6 @@ const MutualFundDashboard = () => {
         setHistoricalNav([]);
         setAumData([]);
         setHeatmapData([]);
-        setRiskData({ metrics: {}, returns: [] });
         return;
       }
       setLoading(true);
@@ -90,16 +91,6 @@ const MutualFundDashboard = () => {
 
         const heatmapResponse = await axios.get(`http://localhost:8000/api/performance-heatmap/${selectedFund.code}`);
         setHeatmapData(heatmapResponse.data);
-
-        const riskResponse = await axios.get(`http://localhost:8000/api/risk-volatility/${selectedFund.code}`);
-        setRiskData({
-          metrics: {
-            annualized_volatility: riskResponse.data.annualized_volatility,
-            annualized_return: riskResponse.data.annualized_return,
-            sharpe_ratio: riskResponse.data.sharpe_ratio,
-          },
-          returns: riskResponse.data.returns,
-        });
       } catch (err) {
         console.error("Error fetching fund details:", err);
         setError("Failed to fetch fund details.");
@@ -138,9 +129,8 @@ const MutualFundDashboard = () => {
       }]
     : [];
 
-  // Filter historical NAV to show at least 30 days with variation
   const filteredNavData = historicalNav.length > 30
-    ? historicalNav.slice(-60).filter((_, index) => index % 2 === 0) // Take last 60 days, every 2nd day for ~30 points
+    ? historicalNav.slice(-60).filter((_, index) => index % 2 === 0)
     : historicalNav;
 
   return (
@@ -206,21 +196,11 @@ const MutualFundDashboard = () => {
                     stroke="#fff" 
                     tick={{ fontSize: 10 }} 
                     interval="preserveStartEnd" 
-                    tickCount={6} // Show ~6 dates for clarity
+                    tickCount={6}
                   />
-                  <YAxis 
-                    stroke="#fff" 
-                    tick={{ fontSize: 10 }} 
-                    domain={['auto', 'auto']} // Auto-scale Y-axis
-                  />
+                  <YAxis stroke="#fff" tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
                   <Tooltip contentStyle={{ backgroundColor: "#333", border: "none" }} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="nav" 
-                    stroke="#00f6ff" 
-                    dot={false} 
-                    strokeWidth={2} 
-                  />
+                  <Line type="monotone" dataKey="nav" stroke="#00f6ff" dot={false} strokeWidth={2} />
                 </LineChart>
               ) : (
                 <p className="text-gray-400">No NAV data</p>
@@ -259,27 +239,12 @@ const MutualFundDashboard = () => {
               )}
             </div>
 
-            {/* Risk and Volatility Card */}
+            {/* Risk & Volatility and Monte Carlo Prediction */}
             <div className="bg-gray-800 rounded-lg p-4 shadow-md md:col-span-2">
-              <h3 className="text-white text-lg font-semibold mb-2">Risk & Volatility</h3>
-              {Object.keys(riskData.metrics).length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="text-gray-300 text-sm">
-                    <p>Volatility: {(riskData.metrics.annualized_volatility * 100).toFixed(2)}%</p>
-                    <p>Return: {(riskData.metrics.annualized_return * 100).toFixed(2)}%</p>
-                    <p>Sharpe: {riskData.metrics.sharpe_ratio.toFixed(2)}</p>
-                  </div>
-                  <LineChart width={350} height={200} data={riskData.returns.slice(-30)}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                    <XAxis dataKey="date" stroke="#fff" tick={{ fontSize: 10 }} />
-                    <YAxis stroke="#fff" tick={{ fontSize: 10 }} />
-                    <Tooltip contentStyle={{ backgroundColor: "#333", border: "none" }} />
-                    <Line type="monotone" dataKey="returns" stroke="#00f6ff" dot={false} strokeWidth={2} />
-                  </LineChart>
-                </div>
-              ) : (
-                <p className="text-gray-400">No risk data</p>
-              )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <RiskVolatility selectedScheme={selectedFund} />
+                <MonteCarloPrediction selectedScheme={selectedFund} />
+              </div>
             </div>
           </div>
         ) : (
