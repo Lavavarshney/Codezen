@@ -6,7 +6,8 @@ import Plotly from "react-plotly.js";
 import styles from "../../style";
 import RiskVolatility from "./RiskVolatility";
 import MonteCarloPrediction from "./MonteCarloPrediiction";
-import CalculateReturns from "./CalculateReturns"; // New import
+import CalculateReturns from "./CalculateReturns";
+import Chatbot from "../Chatbot";
 import Groq from "groq-sdk";
 
 const MutualFundDashboard = () => {
@@ -123,6 +124,7 @@ const MutualFundDashboard = () => {
     setSuggestions([]);
   };
 
+  // Define handleAiAnalysis
   const handleAiAnalysis = async () => {
     if (!selectedFund || Object.keys(fundDetails).length === 0) {
       setAiAnalysis("Please select a fund first!");
@@ -205,7 +207,7 @@ const MutualFundDashboard = () => {
       <div className="max-w-[1200px] mx-auto">
         <div className="mb-6">
           <button
-            onClick={handleAiAnalysis}
+            onClick={handleAiAnalysis} // This is line 51 or close to it
             disabled={loading || !selectedFund}
             className={`py-2 px-4 rounded bg-blue-gradient text-primary font-poppins font-medium ${
               loading || !selectedFund ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"
@@ -285,7 +287,7 @@ const MutualFundDashboard = () => {
             </div>
 
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
-              <CalculateReturns selectedScheme={selectedFund} /> {/* Replace Average AUM */}
+              <CalculateReturns selectedScheme={selectedFund} />
             </div>
 
             <div className="bg-gray-800 rounded-lg p-4 shadow-md">
@@ -330,6 +332,7 @@ const MutualFundDashboard = () => {
           </div>
         )}
       </div>
+      <Chatbot selectedFund={selectedFund} />
     </div>
   );
 };

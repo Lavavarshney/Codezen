@@ -8,6 +8,7 @@ import Testimonials from "./testimonials";
 import Clients from "./clients";
 import CTA from "./CTA";
 import Footer from "./footer";
+import Chatbot from "./Chatbot";
 
 export {
   Navbar,
@@ -20,6 +21,7 @@ export {
   Testimonials,
   Hero,
   Footer,
+  Chatbot,
   
   
 
