@@ -14,6 +14,8 @@ import {
   Footer,
 } from "./components";
 import MutualFundDashboard from "./components/Dashboard/MutualFundDashboard";
+import CoinContextProvider from "./context/CoinContext"; // Import from new context file
+import CryptoDashboard from "./components/CryptoDashboard/App"; // Import the adapted vrinda App.jsx
 
 // Home Page Component
 const Home = () => (
@@ -43,7 +45,7 @@ const Home = () => (
   </div>
 );
 
-// Main Dashboard Component (Wrapper for Stocks and Mutual Funds)
+// Main Dashboard Component (Wrapper for Stocks, Mutual Funds, and Crypto)
 const Dashboard = () => (
   <div className="bg-primary w-full overflow-hidden">
     <div className={`${styles.paddingX} ${styles.flexCenter}`}>
@@ -54,6 +56,7 @@ const Dashboard = () => (
     <Routes>
       <Route path="/stocks" element={<div className={`${styles.paddingY} ${styles.flexCenter} text-white`}>Stock Market Dashboard (To Be Developed)</div>} />
       <Route path="/mutual-funds" element={<MutualFundDashboard />} />
+      <Route path="/crypto/*" element={<CryptoDashboard />} />
     </Routes>
   </div>
 );
@@ -61,10 +64,12 @@ const Dashboard = () => (
 // App Component with Routing
 const App = () => (
   <Router>
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/dashboard/*" element={<Dashboard />} />
-    </Routes>
+    <CoinContextProvider>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard/*" element={<Dashboard />} />
+      </Routes>
+    </CoinContextProvider>
   </Router>
 );
 

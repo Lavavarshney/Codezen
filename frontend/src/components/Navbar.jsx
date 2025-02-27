@@ -1,5 +1,5 @@
 // frontend/src/components/Navbar.jsx
-import { useState } from "react"; // Single import at the top
+import { useState } from "react";
 import { close, logo, menu } from "../assets";
 import { navLinks } from "../constants";
 import { Link } from "react-router-dom";
@@ -34,6 +34,9 @@ const Navbar = () => {
                     </li>
                     <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
                       <Link to="/dashboard/mutual-funds">Mutual Funds</Link>
+                    </li>
+                    <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
+                      <Link to="/dashboard/crypto">Crypto</Link>
                     </li>
                   </ul>
                 )}
@@ -79,6 +82,9 @@ const Navbar = () => {
                         </li>
                         <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
                           <Link to="/dashboard/mutual-funds">Mutual Funds</Link>
+                        </li>
+                        <li className="text-white px-4 py-2 hover:bg-gray-700 cursor-pointer">
+                          <Link to="/dashboard/crypto">Crypto</Link>
                         </li>
                       </ul>
                     )}
